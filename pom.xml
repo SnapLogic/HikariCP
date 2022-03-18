@@ -31,6 +31,14 @@
       <testcontainers.version>1.15.1</testcontainers.version>
    </properties>
 
+   <distributionManagement>
+         <repository>
+            <id>snaplogiceng-thirdparty</id>
+            <name>Actual Repository for thirdparty snaps to be deployed to</name>
+            <url>https://snaplogiceng.jfrog.io/artifactory/thirdparty-local</url>
+         </repository>
+   </distributionManagement>
+
    <groupId>com.zaxxer</groupId>
    <artifactId>HikariCP</artifactId>
    <version>5.0.2-SNAPSHOT</version>
