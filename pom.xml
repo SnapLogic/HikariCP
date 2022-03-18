@@ -41,7 +41,7 @@
 
    <groupId>com.zaxxer</groupId>
    <artifactId>HikariCP</artifactId>
-   <version>5.0.2-SNAPSHOT</version>
+   <version>5.0.1-SNAP</version>
    <packaging>bundle</packaging>
 
    <name>HikariCP</name>
@@ -57,7 +57,7 @@
       <connection>scm:git:git@github.com:brettwooldridge/HikariCP.git</connection>
       <developerConnection>scm:git:git@github.com:brettwooldridge/HikariCP.git</developerConnection>
       <url>git@github.com:brettwooldridge/HikariCP.git</url>
-      <tag>HEAD</tag>
+      <tag>HikariCP-5.0.1-SNAP</tag>
    </scm>
 
    <licenses>
