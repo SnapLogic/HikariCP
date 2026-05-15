@@ -250,8 +250,14 @@ public abstract class ProxyConnection implements Connection
          leakTask.cancel();
 
          try {
-            if (isCommitStateDirty && !isAutoCommit && !REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
+            if (isCommitStateDirty && !isAutoCommit) {
                delegate.rollback();
+               if (REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
+                  //   This strips the DIRTY_BIT_AUTOCOMMIT flag so that
+                  //   resetConnectionState won't call setAutoCommit(true) on the
+                  //   underlying connection — preventing the implicit commit by the JDBC driver.
+                  dirtyBits &= ~DIRTY_BIT_AUTOCOMMIT;
+               }
                LOGGER.debug("{} - Executed rollback on connection {} due to dirty commit state on close().", poolEntry.getPoolName(), delegate);
             }
 
@@ -379,24 +385,30 @@ public abstract class ProxyConnection implements Connection
    @Override
    public void commit() throws SQLException
    {
-      delegate.commit();
-      isCommitStateDirty = false;
+      if (!REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
+         delegate.commit();
+         isCommitStateDirty = false;
+      }
    }
 
    /** {@inheritDoc} */
    @Override
    public void rollback() throws SQLException
    {
-      delegate.rollback();
-      isCommitStateDirty = false;
+      if (!REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
+         delegate.rollback();
+         isCommitStateDirty = false;
+      }
    }
 
    /** {@inheritDoc} */
    @Override
    public void rollback(Savepoint savepoint) throws SQLException
    {
-      delegate.rollback(savepoint);
-      isCommitStateDirty = false;
+      if (!REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
+         delegate.rollback(savepoint);
+         isCommitStateDirty = false;
+      }
    }
 
    /** {@inheritDoc} */
