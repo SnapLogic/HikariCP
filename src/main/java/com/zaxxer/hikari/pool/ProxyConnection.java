@@ -20,6 +20,7 @@ import com.zaxxer.hikari.util.FastList;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import java.io.PrintStream;
 import java.lang.reflect.InvocationHandler;
 import java.lang.reflect.Proxy;
 import java.sql.*;
@@ -28,6 +29,23 @@ import java.util.Set;
 import java.util.concurrent.Executor;
 
 import static com.zaxxer.hikari.SQLExceptionOverride.Override.DO_NOT_EVICT;
+
+/**
+ * Initialize PrintStream for logging to a temporary file.
+ */
+class LogStreamInitializer {
+   static PrintStream initializeLogStream() {
+      try {
+         java.io.File tempFile =
+            java.io.File.createTempFile("hikaricp-log-"+System.currentTimeMillis(), ".txt");
+         System.out.println("HikariCP logs will be written to: " + tempFile.getAbsolutePath());
+         return new PrintStream(tempFile);
+      } catch (java.io.IOException e) {
+         System.err.println("Failed to create temp log file: " + e.getMessage());
+         return System.out;
+      }
+   }
+}
 
 /**
  * This is the proxy class for java.sql.Connection.
@@ -64,9 +82,11 @@ public abstract class ProxyConnection implements Connection
    private int transactionIsolation;
    private String dbcatalog;
    private String dbschema;
+   private static PrintStream ps;
 
    // static initializer
    static {
+      ps = LogStreamInitializer.initializeLogStream();
       LOGGER = LoggerFactory.getLogger(ProxyConnection.class);
 
       ERROR_STATES = new HashSet<>();
@@ -248,9 +268,10 @@ public abstract class ProxyConnection implements Connection
 
       if (delegate != ClosedConnection.CLOSED_CONNECTION) {
          leakTask.cancel();
-
+         ps.println("Closing connection " + delegate + " with dirty commit state: " + isCommitStateDirty);
          try {
             if (isCommitStateDirty && !isAutoCommit) {
+               ps.println("Rolling back connection " + delegate + " with dirty commit state: " + isCommitStateDirty);
                delegate.rollback();
                if (REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
                   //   This strips the DIRTY_BIT_AUTOCOMMIT flag so that
@@ -276,6 +297,7 @@ public abstract class ProxyConnection implements Connection
          finally {
             delegate = ClosedConnection.CLOSED_CONNECTION;
             poolEntry.recycle();
+            ps.close();
          }
       }
    }
@@ -385,7 +407,9 @@ public abstract class ProxyConnection implements Connection
    @Override
    public void commit() throws SQLException
    {
+      ps.println("Committing connection " + delegate + " with dirty commit state: " + isCommitStateDirty);
       if (!REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
+         LOGGER.info("Committing connection " + delegate + " with dirty commit state: " + isCommitStateDirty);
          delegate.commit();
          isCommitStateDirty = false;
       }
@@ -395,7 +419,9 @@ public abstract class ProxyConnection implements Connection
    @Override
    public void rollback() throws SQLException
    {
+      ps.println("Rolling back connection " + delegate + " with dirty commit state: " + isCommitStateDirty);
       if (!REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
+         LOGGER.info("Rolling back connection " + delegate + " with dirty commit state: " + isCommitStateDirty);
          delegate.rollback();
          isCommitStateDirty = false;
       }
@@ -405,7 +431,10 @@ public abstract class ProxyConnection implements Connection
    @Override
    public void rollback(Savepoint savepoint) throws SQLException
    {
+      ps.println("Rolling back connection " + delegate + " to savepoint " + savepoint + " with dirty commit state: " + isCommitStateDirty);
       if (!REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
+         LOGGER.info("Rolling back connection " + delegate + " to savepoint " + savepoint + " with " +
+                    "dirty commit state: " + isCommitStateDirty);
          delegate.rollback(savepoint);
          isCommitStateDirty = false;
       }

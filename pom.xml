@@ -41,7 +41,7 @@
 
    <groupId>com.zaxxer</groupId>
    <artifactId>HikariCP</artifactId>
-   <version>5.1.0-SNAP</version>
+   <version>5.1.0-SNAP.26B</version>
    <packaging>bundle</packaging>
 
    <name>HikariCP</name>
