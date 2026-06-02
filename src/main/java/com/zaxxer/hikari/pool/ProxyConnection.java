@@ -250,17 +250,16 @@ public abstract class ProxyConnection implements Connection
          leakTask.cancel();
 
          try {
-            if (isCommitStateDirty && !isAutoCommit) {
+            if (isCommitStateDirty && !isAutoCommit && !REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
                delegate.rollback();
-               if (REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
-                  //   This strips the DIRTY_BIT_AUTOCOMMIT flag so that
-                  //   resetConnectionState won't call setAutoCommit(true) on the
-                  //   underlying connection — preventing the implicit commit by the JDBC driver.
-                  dirtyBits &= ~DIRTY_BIT_AUTOCOMMIT;
-               }
                LOGGER.debug("{} - Executed rollback on connection {} due to dirty commit state on close().", poolEntry.getPoolName(), delegate);
             }
-
+            if (REQUIRED_EXPLICIT_TRANSACTIONS_CONTROL) {
+               //   This strips the DIRTY_BIT_AUTOCOMMIT flag so that
+               //   resetConnectionState won't call setAutoCommit(true) on the
+               //   underlying connection — preventing the implicit commit by the JDBC driver.
+               dirtyBits &= ~DIRTY_BIT_AUTOCOMMIT;
+            }
             if (dirtyBits != 0) {
                poolEntry.resetConnectionState(this, dirtyBits);
             }
